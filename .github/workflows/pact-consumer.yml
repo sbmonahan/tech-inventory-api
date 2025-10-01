@@ -3,7 +3,7 @@ name: Pact Consumer Tests
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, development, test ]
 
 jobs:
   pact-consumer:
@@ -20,7 +20,7 @@ jobs:
         env:
           CI: true
         run: |
-          npm run pact:consumer:test
+          npm run test
       - name: Upload pacts
         if: success()
         uses: actions/upload-artifact@v4
