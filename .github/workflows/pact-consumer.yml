@@ -1,0 +1,29 @@
+name: Pact Consumer Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  pact-consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Pact consumer tests
+        env:
+          CI: true
+        run: |
+          npm run pact:consumer:test
+      - name: Upload pacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacts
+          path: pacts/*.json

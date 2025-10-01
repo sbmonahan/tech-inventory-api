@@ -1,0 +1,394 @@
+openapi: 3.0.0
+info:
+  title: Tech Inventory API
+  version: 1.0.1
+  description: >
+    Simple CRUD API for tech items backed by a text file (JSON array in db.txt).
+    Includes a /reset endpoint to restore a known seed state and a /usage endpoint
+    that returns a human-readable usage message derived from this spec.
+  contact:
+    name: API Support Manager
+    email: support@example.com
+    url: https://example.com/support
+  x-api-id: tech-inventory-api
+  x-data-classification: internal
+
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Monahan-Tutorials/contract-testing/1.0.1
+  - url: http://localhost:3000
+
+tags:
+  - name: Items
+    description: Operations for listing and managing inventory items.
+  - name: System
+    description: Administrative and utility endpoints.
+
+paths:
+  /items:
+    get:
+      tags: [Items]
+      operationId: list_items
+      summary: List items.
+      description: >
+        Returns a paginated list of items. Supports simple full-text search and filtering by item type.
+      parameters:
+        - in: query
+          name: query
+          description: Full-text search in name/tags.
+          schema:
+            type: string
+        - in: query
+          name: type
+          description: Filter by item type.
+          schema:
+            type: string
+            enum: [LAPTOP, PHONE, ACCESSORY, COMPONENT, SERVICE]
+        - in: query
+          name: limit
+          description: Page size.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - in: query
+          name: offset
+          description: Offset from the beginning of the list.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: A paginated list of items.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    minimum: 0
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Item"
+              examples:
+                sample:
+                  value:
+                    total: 2
+                    items:
+                      - id: 1
+                        name: "ThinkPad X1 Carbon"
+                        type: "LAPTOP"
+                        price: 1899
+                        in_stock: true
+                        tags: ["ultrabook","14in"]
+                        created_at: "2025-01-01T12:00:00Z"
+                        updated_at: "2025-01-01T12:00:00Z"
+                      - id: 2
+                        name: "iPhone 15"
+                        type: "PHONE"
+                        price: 999
+                        in_stock: false
+                        tags: ["ios","128gb"]
+                        created_at: "2025-02-01T12:00:00Z"
+                        updated_at: "2025-02-12T08:30:00Z"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+    post:
+      tags: [Items]
+      operationId: create_item
+      summary: Create an item.
+      description: Create a new inventory item.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreate"
+            examples:
+              sample:
+                value:
+                  name: "USB-C Hub"
+                  type: "ACCESSORY"
+                  price: 49.99
+                  in_stock: false
+                  tags: ["dock","usb-c"]
+      responses:
+        "201":
+          description: Created.
+          headers:
+            Location:
+              description: URL of the new resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+              examples:
+                sample:
+                  value:
+                    id: 3
+                    name: "USB-C Hub"
+                    type: "ACCESSORY"
+                    price: 49.99
+                    in_stock: false
+                    tags: ["dock","usb-c"]
+                    created_at: "2025-03-01T10:00:00Z"
+                    updated_at: "2025-03-01T10:00:00Z"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /items/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        description: Item identifier.
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags: [Items]
+      operationId: get_item
+      summary: Get one item by id.
+      description: Retrieve a single item by its identifier.
+      responses:
+        "200":
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+              examples:
+                sample:
+                  value:
+                    id: 1
+                    name: "ThinkPad X1 Carbon"
+                    type: "LAPTOP"
+                    price: 1899
+                    in_stock: true
+                    tags: ["ultrabook","14in"]
+                    created_at: "2025-01-01T12:00:00Z"
+                    updated_at: "2025-01-01T12:00:00Z"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+    patch:
+      tags: [Items]
+      operationId: patch_item
+      summary: Partially update an item.
+      description: Update one or more fields on an existing item. Only provided fields are changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemPatch"
+            examples:
+              sample:
+                value:
+                  price: 39.99
+                  tags: ["sale"]
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          description: Invalid request body or parameters.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+    put:
+      tags: [Items]
+      operationId: replace_item
+      summary: Replace an item.
+      description: Replace an existing item. The server preserves `id` and `created_at`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemUpdate"
+            examples:
+              sample:
+                value:
+                  name: "USB-C Hub"
+                  type: "ACCESSORY"
+                  price: 49.99
+                  in_stock: true
+                  tags: ["dock","usb-c"]
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          description: Invalid request body or parameters.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+    delete:
+      tags: [Items]
+      operationId: delete_item
+      summary: Delete an item.
+      description: Remove an item from the inventory.
+      responses:
+        "204":
+          description: No Content. Item deleted successfully.
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ItemCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ItemPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

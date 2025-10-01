@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:soapui-project id="ad12279d-1ac9-438b-a5ba-6a8bf8176f89" created="3.62.0" activeEnvironment="Default environment" encryptionMode="Not encrypted" name="Tech Inventory API" projectVersion="" updated="3.62.0 2025-09-03T10:21:09Z" xmlns:con="http://eviware.com/soapui/config">
+  <con:settings/>
+  <con:interface xsi:type="con:RestService" id="d633c5d6-f02b-4ee7-b658-7f026e82ed9a" name="Tech Inventory API" type="rest_ex" wadlVersion="https://swagger.io/openapiv3/specification" definitionUrl="file:/C:/Users/john.monahan/gits/tech-inventory-api/openapi.yaml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <con:description>Simple CRUD API for tech items backed by a text file (JSON array in db.txt). Includes a /reset endpoint to restore a known seed state and a /usage endpoint that returns a human-readable usage message derived from this spec.
+</con:description>
+    <con:settings id="2010941a-cbcd-4310-88b7-09084e4d2c47"/>
+    <con:definitionCache type="TEXT" rootPart="file:/C:/Users/john.monahan/gits/tech-inventory-api/openapi.yaml">
+      <con:part>
+        <con:url>file:/C:/Users/john.monahan/gits/tech-inventory-api/openapi.yaml</con:url>
+        <con:content>openapi: 3.1.0
+info:
+  title: Tech Inventory API
+  description: |
+    Simple CRUD API for tech items backed by a text file (JSON array in db.txt). Includes a /reset endpoint to restore a known seed state and a /usage endpoint that returns a human-readable usage message derived from this spec.
+  version: 1.0.1
+servers:
+- url: http://localhost:3000
+paths:
+  /items:
+    get:
+      summary: List items
+      parameters:
+      - name: q
+        in: query
+        description: Full-text search in name/tags.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - laptop
+          - phone
+          - accessory
+          - component
+          - service
+      - name: limit
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+          default: 50
+          maximum: 200
+          minimum: 1
+      - name: offset
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+      responses:
+        "200":
+          description: A paginated list of items.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Item'
+    post:
+      summary: Create an item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreate'
+        required: true
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              description: URL of the new resource
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+  /items/{id}:
+    get:
+      summary: Get one item by id
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Replace an item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdate'
+        required: true
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete an item
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: '#/components/responses/NotFound'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+  /reset:
+    post:
+      summary: Reset database to a known seed state
+      description: Replaces the database file with the contents of seed.txt.
+      responses:
+        "204":
+          description: Reset completed
+  /usage:
+    get:
+      summary: Usage overview derived from the OpenAPI document
+      description: |
+        Returns a human-readable usage message constructed from this OpenAPI spec. Optionally pass `refresh=1` (or `true`) to rebuild the message from disk.
+      parameters:
+      - name: refresh
+        in: query
+        description: Rebuild the usage text from the current openapi.yaml.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: Text usage guide
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                Tech Inventory API (v1.0.1)
+                Base URL: http://localhost:3000
+
+                Endpoints:
+                - GET /items — List items
+                  e.g., curl -X GET "http://localhost:3000/items"
+                - POST /items — Create an item
+                  e.g., curl -X POST "http://localhost:3000/items" -H "content-type: application/json" -d '{"...": "..."}'
+                - GET /items/{id} — Get one item by id
+                  e.g., curl -X GET "http://localhost:3000/items/{id}"
+                - PUT /items/{id} — Replace an item
+                  e.g., curl -X PUT "http://localhost:3000/items/{id}" -H "content-type: application/json" -d '{"...": "..."}'
+                - DELETE /items/{id} — Delete an item
+                  e.g., curl -X DELETE "http://localhost:3000/items/{id}"
+                - POST /reset — Reset database to a known seed state
+                  e.g., curl -X POST "http://localhost:3000/reset"
+
+                Tip: Get the full spec at /openapi.yaml
+  /openapi.yaml:
+    description: ""
+    get:
+      description: ""
+      responses:
+        default:
+          description: Default response
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          description: UUID
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        type:
+          type: string
+          enum:
+          - laptop
+          - phone
+          - accessory
+          - component
+          - service
+        price:
+          type: number
+          minimum: 0
+        inStock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+      - createdAt
+      - id
+      - inStock
+      - name
+      - price
+      - type
+      - updatedAt
+    ItemCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - laptop
+          - phone
+          - accessory
+          - component
+          - service
+        price:
+          type: number
+          minimum: 0
+        inStock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+      - inStock
+      - name
+      - price
+      - type
+    ItemUpdate:
+      allOf:
+      - $ref: '#/components/schemas/ItemCreate'
+      description: Full replacement (PUT). Server preserves id/createdAt.
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+</con:content>
+        <con:type>https://swagger.io/openapiv3/specification</con:type>
+      </con:part>
+    </con:definitionCache>
+    <con:endpoints>
+      <con:endpoint>http://localhost:3000</con:endpoint>
+    </con:endpoints>
+    <con:resource name="/items" path="/items" id="4f231925-dd8a-42e6-9e06-d2191f4ece7b">
+      <con:settings/>
+      <con:parameters/>
+      <con:method name="GET" id="49d3f26a-94b9-4434-943b-733cb5bf10ca" method="GET">
+        <con:description>List items</con:description>
+        <con:settings/>
+        <con:parameters>
+          <con:parameter>
+            <con:name>q</con:name>
+            <con:style>QUERY</con:style>
+            <con:description>Full-text search in name/tags.</con:description>
+          </con:parameter>
+          <con:parameter>
+            <con:name>type</con:name>
+            <con:style>QUERY</con:style>
+          </con:parameter>
+          <con:parameter>
+            <con:name>limit</con:name>
+            <con:value>50</con:value>
+            <con:style>QUERY</con:style>
+            <con:default>50</con:default>
+          </con:parameter>
+          <con:parameter>
+            <con:name>offset</con:name>
+            <con:value>0</con:value>
+            <con:style>QUERY</con:style>
+            <con:default>0</con:default>
+          </con:parameter>
+        </con:parameters>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>200</con:status>
+          <con:params/>
+          <con:description>A paginated list of items.</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:request name="Request 1" id="a18d315a-49b9-4a9b-8ca2-48b3b08e943e" mediaType="application/json">
+          <con:settings>
+            <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+          </con:settings>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:request/>
+          <con:originalUri>http://localhost/items</con:originalUri>
+          <con:credentials>
+            <con:selectedAuthProfile>No Authorization</con:selectedAuthProfile>
+            <con:authType>No Authorization</con:authType>
+          </con:credentials>
+          <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+      <con:method name="POST" id="391cc5f2-e3f4-45ab-8b81-25c15226b2d4" method="POST">
+        <con:description>Create an item</con:description>
+        <con:settings/>
+        <con:parameters/>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>201</con:status>
+          <con:params/>
+          <con:description>Created</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:representation type="REQUEST">
+          <con:mediaType>application/json</con:mediaType>
+          <con:params/>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:request name="Request 1" id="7b568288-28b5-4fe1-ae8e-ed7250afbd2c" mediaType="application/json">
+          <con:settings/>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:request>{ }</con:request>
+          <con:credentials>
+            <con:selectedAuthProfile>No Authorization</con:selectedAuthProfile>
+            <con:authType>No Authorization</con:authType>
+          </con:credentials>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+    </con:resource>
+    <con:resource name="/items/{id}" path="/items/{id}" id="c0a1ac62-b60c-4790-a83e-75c7559eb82e">
+      <con:settings/>
+      <con:parameters>
+        <con:parameter required="true">
+          <con:name>id</con:name>
+          <con:style>TEMPLATE</con:style>
+        </con:parameter>
+      </con:parameters>
+      <con:method name="GET" id="f9bd1a66-3f81-471d-a9a4-63a53ce12698" method="GET">
+        <con:description>Get one item by id</con:description>
+        <con:settings/>
+        <con:parameters/>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>200</con:status>
+          <con:params/>
+          <con:description>OK</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>404</con:status>
+          <con:params/>
+          <con:description>Resource not found</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:request name="Request 1" id="deafd9a3-31b5-463b-9e06-6ee73b624528" mediaType="application/json">
+          <con:settings/>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+      <con:method name="DELETE" id="0487db4f-930d-4f45-ab3e-8d4d2d91ca20" method="DELETE">
+        <con:description>Delete an item</con:description>
+        <con:settings/>
+        <con:parameters/>
+        <con:representation type="RESPONSE">
+          <con:status>204</con:status>
+          <con:params/>
+          <con:description>Deleted</con:description>
+        </con:representation>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>404</con:status>
+          <con:params/>
+          <con:description>Resource not found</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:request name="Request 1" id="f3ceb4a0-5dad-4d72-b1b0-a338116379d8" mediaType="application/json">
+          <con:settings/>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+      <con:method name="PUT" id="a01dbcef-060f-4d8a-8250-37f5bfff9ef0" method="PUT">
+        <con:description>Replace an item</con:description>
+        <con:settings/>
+        <con:parameters/>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>200</con:status>
+          <con:params/>
+          <con:description>Updated</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:representation type="RESPONSE">
+          <con:mediaType>application/json</con:mediaType>
+          <con:status>404</con:status>
+          <con:params/>
+          <con:description>Resource not found</con:description>
+          <con:sampleContent>{ }</con:sampleContent>
+        </con:representation>
+        <con:representation type="REQUEST">
+          <con:mediaType>application/json</con:mediaType>
+          <con:params/>
+        </con:representation>
+        <con:request name="Request 1" id="cfb01112-6171-4e18-9ced-63014c0e184a" mediaType="application/json">
+          <con:settings/>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+    </con:resource>
+    <con:resource name="/reset" path="/reset" id="fda8e11f-50c8-46bf-a5e9-5d6169f4796b">
+      <con:settings/>
+      <con:parameters/>
+      <con:method name="POST" id="c8a86b84-6fb7-4d92-9c4c-db8720697b02" method="POST">
+        <con:description>Replaces the database file with the contents of seed.txt.</con:description>
+        <con:settings/>
+        <con:parameters/>
+        <con:representation type="RESPONSE">
+          <con:status>204</con:status>
+          <con:params/>
+          <con:description>Reset completed</con:description>
+        </con:representation>
+        <con:request name="Request 1" id="16c48118-df04-44a8-bd0e-1200a9ab2860" mediaType="application/json">
+          <con:settings/>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+    </con:resource>
+    <con:resource name="/usage" path="/usage" id="d7ccf5fd-9b6e-477f-a3e3-78bb9a20de6e">
+      <con:settings/>
+      <con:parameters/>
+      <con:method name="GET" id="d9d432c1-2d57-44e1-8be8-560c5bff8c4d" method="GET">
+        <con:description>Returns a human-readable usage message constructed from this OpenAPI spec. Optionally pass `refresh=1` (or `true`) to rebuild the message from disk.
+</con:description>
+        <con:settings/>
+        <con:parameters>
+          <con:parameter>
+            <con:name>refresh</con:name>
+            <con:value>false</con:value>
+            <con:style>QUERY</con:style>
+            <con:default>false</con:default>
+            <con:description>Rebuild the usage text from the current openapi.yaml.</con:description>
+          </con:parameter>
+        </con:parameters>
+        <con:representation type="RESPONSE">
+          <con:mediaType>text/plain</con:mediaType>
+          <con:status>200</con:status>
+          <con:params/>
+          <con:description>Text usage guide</con:description>
+          <con:sampleContent>Tech Inventory API (v1.0.1)
+Base URL: http://localhost:3000
+
+Endpoints:
+- GET /items — List items
+  e.g., curl -X GET "http://localhost:3000/items"
+- POST /items — Create an item
+  e.g., curl -X POST "http://localhost:3000/items" -H "content-type: application/json" -d '{"...": "..."}'
+- GET /items/{id} — Get one item by id
+  e.g., curl -X GET "http://localhost:3000/items/{id}"
+- PUT /items/{id} — Replace an item
+  e.g., curl -X PUT "http://localhost:3000/items/{id}" -H "content-type: application/json" -d '{"...": "..."}'
+- DELETE /items/{id} — Delete an item
+  e.g., curl -X DELETE "http://localhost:3000/items/{id}"
+- POST /reset — Reset database to a known seed state
+  e.g., curl -X POST "http://localhost:3000/reset"
+
+Tip: Get the full spec at /openapi.yaml
+</con:sampleContent>
+        </con:representation>
+        <con:request name="Request 1" id="b796c3b1-2667-4656-b85a-1efaeb09dfdd" mediaType="application/json">
+          <con:settings>
+            <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+          </con:settings>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:request/>
+          <con:originalUri>http://localhost/usage</con:originalUri>
+          <con:credentials>
+            <con:selectedAuthProfile>No Authorization</con:selectedAuthProfile>
+            <con:authType>No Authorization</con:authType>
+          </con:credentials>
+          <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+    </con:resource>
+    <con:resource name="openapi.yml" path="/openapi.yaml" id="172530a2-4ced-4e4d-bd40-e38366fb6ce7">
+      <con:settings/>
+      <con:parameters/>
+      <con:method name="Method 1" id="cc9100cb-99a2-4afd-b9bf-f0a13d25246b" method="GET">
+        <con:settings/>
+        <con:parameters/>
+        <con:request name="Request 1" id="9d591ff8-5024-487d-80e7-cb5d4b8359d5" mediaType="application/json">
+          <con:settings>
+            <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+          </con:settings>
+          <con:endpoint>http://localhost:3000</con:endpoint>
+          <con:request/>
+          <con:originalUri>http://localhost/openapi.yaml</con:originalUri>
+          <con:credentials>
+            <con:selectedAuthProfile>No Authorization</con:selectedAuthProfile>
+            <con:authType>No Authorization</con:authType>
+          </con:credentials>
+          <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+          <con:parameters/>
+        </con:request>
+      </con:method>
+    </con:resource>
+  </con:interface>
+  <con:testSuite id="3cf77e85-783a-47a6-9dd2-b0e7bc2c6060" name="Tech Inventory API Test Suite 1">
+    <con:description>The test suite generated for the REST service [Tech Inventory API]</con:description>
+    <con:settings id="3febdf9b-cfe5-4ee9-bd40-827ed9b590f4"/>
+    <con:runType>SEQUENTIAL</con:runType>
+    <con:testCase id="f58c9c36-74ed-4ac0-952e-20b793af27b9" discardOkResults="false" failOnError="false" failTestCaseOnErrors="true" keepSession="false" name="/items Test Case" searchProperties="true" timeout="0">
+      <con:description>The test case generated for the REST resource [/items] located at [/items]</con:description>
+      <con:settings/>
+      <con:testStep type="restrequest" name="Request 1" id="8f7a544b-318c-4508-8ab2-f30b8bb83d03">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/items" methodName="GET" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1" id="a18d315a-49b9-4a9b-8ca2-48b3b08e943e" mediaType="application/json">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+            </con:settings>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/items</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="restrequest" name="Request 1 2" id="868770ab-ea41-41e1-881e-ee4eca7acbae">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/items" methodName="POST" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1 2" id="7b568288-28b5-4fe1-ae8e-ed7250afbd2c" mediaType="application/json" postQueryString="false">
+            <con:settings/>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request>{ }</con:request>
+            <con:originalUri>http://localhost/items</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+      <con:reportParameters/>
+    </con:testCase>
+    <con:testCase id="013358f9-a95d-460e-8932-6de1b1dcd99b" discardOkResults="false" failOnError="false" failTestCaseOnErrors="true" keepSession="false" name="/items/{id} Test Case" searchProperties="true" timeout="0">
+      <con:description>The test case generated for the REST resource [/items/{id}] located at [/items/{id}]</con:description>
+      <con:settings/>
+      <con:testStep type="restrequest" name="Request 1" id="00bc4001-1ff5-4069-a987-d6866f43404f">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/items/{id}" methodName="GET" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1" id="deafd9a3-31b5-463b-9e06-6ee73b624528" mediaType="application/json">
+            <con:settings/>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/items/</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="restrequest" name="Request 1 2" id="291bbb57-b94c-47a1-a09a-68c862ac3436">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/items/{id}" methodName="DELETE" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1 2" id="f3ceb4a0-5dad-4d72-b1b0-a338116379d8" mediaType="application/json" postQueryString="false">
+            <con:settings/>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/items/</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="restrequest" name="Request 1 3" id="d2fd92d2-b63b-45c0-835b-511cb7f96d93">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/items/{id}" methodName="PUT" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1 3" id="cfb01112-6171-4e18-9ced-63014c0e184a" mediaType="application/json" postQueryString="false">
+            <con:settings/>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/items/</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+      <con:reportParameters/>
+    </con:testCase>
+    <con:testCase id="1a15b247-4502-4e4e-aa22-5be76a6922d0" discardOkResults="false" failOnError="false" failTestCaseOnErrors="true" keepSession="false" name="/reset Test Case" searchProperties="true" timeout="0">
+      <con:description>The test case generated for the REST resource [/reset] located at [/reset]</con:description>
+      <con:settings/>
+      <con:testStep type="restrequest" name="Request 1" id="cbfec57a-b43f-408b-9cc6-4c8ea5fe7d69">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/reset" methodName="POST" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1" id="16c48118-df04-44a8-bd0e-1200a9ab2860" mediaType="application/json" postQueryString="false">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+            </con:settings>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/reset</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+      <con:reportParameters/>
+    </con:testCase>
+    <con:testCase id="c81c48b7-a189-4ef3-b5e7-ead0a0920378" discardOkResults="false" failOnError="false" failTestCaseOnErrors="true" keepSession="false" name="/usage Test Case" searchProperties="true" timeout="0">
+      <con:description>The test case generated for the REST resource [/usage] located at [/usage]</con:description>
+      <con:settings/>
+      <con:testStep type="restrequest" name="Request 1" id="0c3667ac-b3a3-4de8-a191-b135bb399ec3">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/usage" methodName="GET" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1" id="b796c3b1-2667-4656-b85a-1efaeb09dfdd" mediaType="application/json">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+            </con:settings>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/usage</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+      <con:reportParameters/>
+    </con:testCase>
+    <con:testCase id="4e0d8faf-ea70-476c-8912-54c6f1e1e463" discardOkResults="false" failOnError="false" failTestCaseOnErrors="true" keepSession="false" name="openapi.yml Test Case" searchProperties="true" timeout="0">
+      <con:description>The test case generated for the REST resource [openapi.yml] located at [/openapi.yaml]</con:description>
+      <con:settings/>
+      <con:testStep type="restrequest" name="Request 1" id="23f24bfb-7adc-4c51-94ba-c28844807027">
+        <con:settings/>
+        <con:config service="Tech Inventory API" resourcePath="/openapi.yaml" methodName="Method 1" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <con:restRequest name="Request 1" id="9d591ff8-5024-487d-80e7-cb5d4b8359d5" mediaType="application/json">
+            <con:settings>
+              <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting>
+            </con:settings>
+            <con:endpoint>http://localhost:3000</con:endpoint>
+            <con:request/>
+            <con:originalUri>http://localhost/openapi.yaml</con:originalUri>
+            <con:credentials>
+              <con:selectedAuthProfile>Inherit From Service</con:selectedAuthProfile>
+              <con:authType>No Authorization</con:authType>
+            </con:credentials>
+            <con:jmsConfig JMSDeliveryMode="PERSISTENT"/>
+            <con:parameters/>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:properties/>
+      <con:reportParameters/>
+    </con:testCase>
+    <con:properties/>
+    <con:reportParameters/>
+  </con:testSuite>
+  <con:properties/>
+  <con:wssContainer/>
+  <con:databaseConnectionContainer/>
+  <con:jmsConnectionContainer/>
+  <con:oAuth2ProfileContainer/>
+  <con:oAuth1ProfileContainer/>
+  <con:reporting>
+    <con:xmlTemplates/>
+    <con:parameters/>
+  </con:reporting>
+  <con:eventHandlers type="RequestFilter.filterRequest" name="RequestFilter.filterRequest">
+    <con:script>// Sample event script to add custom HTTP header to all outgoing REST, SOAP and HTTP(S) calls
+// This code is often used for adding custom authentication to ReadyAPI functional tests
+
+// If hardcoding the token, uncomment and change line 5
+// token = '4567'
+
+// If your token is parameterized in Project level custom property, uncomment line 8
+// token = request.parent.testCase.testSuite.project.getProperty('auth_token').getValue()
+
+// To modify all outgoing calls, remove comments from lines 11 to 16
+// headers = request.requestHeaders
+// if (headers.containsKey('auth_token2') == false) {
+//   headers.put('auth_token2', token)
+//   request.requestHeaders = headers
+// }</con:script>
+  </con:eventHandlers>
+  <con:eventHandlers type="TestRunListener.afterStep" name="TestRunListener.afterStep">
+    <con:script>// Save all test step results into files
+// Change the directory path in line 5 to a location where you want to store details
+// then uncomment lines 5 to 10
+
+// filePath = 'C:\\tempOutputDirectory\\'
+// fos = new java.io.FileOutputStream(filePath + testStepResult.testStep.label + '.txt', true)
+// pw = new java.io.PrintWriter(fos)
+// testStepResult.writeTo(pw)
+// pw.close()
+// fos.close()</con:script>
+  </con:eventHandlers>
+  <con:authRepository/>
+  <con:tags/>
+</con:soapui-project>

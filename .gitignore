@@ -1,0 +1,38 @@
+# --- Core Node.js ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# Build & test artifacts
+dist/
+build/
+coverage/
+.nyc_output/
+.tmp/
+temp/
+
+# Pact artifacts (generated)
+pacts/
+.pact/
+
+# Environment & local config (never commit secrets)
+.env
+.env.*
+*.local
+
+# Logs
+logs/
+*.log
+
+# Editors/OS
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Miscellaneous archives
+*.tgz
+*.zip

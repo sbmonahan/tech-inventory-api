@@ -1,0 +1,34 @@
+{
+  "name": "tech-inventory-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node ./scripts/run-pact-tests.js",
+    "verify:provider": "node ./scripts/verify-provider.js",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "reset": "node server.js --reset",
+    "report": "node ./scripts/report.js",
+    "add-items": "node ./scripts/add-items.js",
+    "reset-db": "node ./scripts/reset-db.js",
+    "delete-random": "node ./scripts/delete-random.js",
+    "test-regression": "node ./tests/test-regression.js",
+    "pact:consumer": "node ./tests/pact-consumer-smoke.js",
+    "pact:consumer:test": "node ./tests/pact-consumer.spec.js",
+    "1-publish-consumer": "node ./scripts/1-publish-consumer.js",
+    "2-publish-provider-contract": "node ./scripts/2-publish-provider-contract.js",
+    "fetch-oas": "node ./scripts/fetch-oas.js"
+  },
+
+  "dependencies": {
+    "express": "^4.19.2",
+    "js-yaml": "^4.1.0",
+    "morgan": "^1.10.0"
+  },
+  
+  "devDependencies": {
+    "@pact-foundation/pact": "^15.0.1",
+    "@pact-foundation/pact-cli": "^16.1.4",
+    "dotenv": "^17.2.2"
+  }
+}

@@ -1,0 +1,404 @@
+openapi: 3.0.0
+info:
+  title: Tech Inventory API
+  description: |
+    Simple CRUD API for tech items backed by a text file (JSON array in db.txt). Includes a /reset endpoint to restore a known seed state and a /usage endpoint that returns a human-readable usage message derived from this spec.
+  contact:
+    name: API Support Manager
+    url: https://example.com/support
+    email: support@example.com
+  version: 1.0.1
+  x-api-id: tech-inventory-api
+  x-data-classification: internal
+servers:
+- url: https://virtserver.swaggerhub.com/Monahan-Tutorials/tech-inventory-api/1.0.1
+  description: SwaggerHub API Auto Mocking
+- url: https://virtserver.swaggerhub.com/Monahan-Tutorials/contract-testing/1.0.1
+  description: SwaggerHub API Auto Mocking
+- url: http://localhost:3000
+tags:
+- name: Items
+  description: Operations for listing and managing inventory items.
+- name: System
+  description: Administrative and utility endpoints.
+paths:
+  /items:
+    get:
+      tags:
+      - Items
+      summary: List items.
+      description: |
+        Returns a paginated list of items. Supports simple full-text search and filtering by item type.
+      operationId: list_items
+      parameters:
+      - name: query
+        in: query
+        description: Full-text search in name/tags.
+        required: false
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: Filter by item type.
+        required: false
+        schema:
+          type: string
+          enum:
+          - LAPTOP
+          - PHONE
+          - ACCESSORY
+          - COMPONENT
+          - SERVICE
+      - name: limit
+        in: query
+        description: Page size.
+        required: false
+        schema:
+          maximum: 200
+          minimum: 1
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        description: Offset from the beginning of the list.
+        required: false
+        schema:
+          minimum: 0
+          type: integer
+          default: 0
+      responses:
+        "200":
+          description: A paginated list of items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200"
+              examples:
+                sample:
+                  value:
+                    total: 3
+                    items:
+                    - id: 1
+                      name: X
+                      type: laptop
+                      price: 100
+                      in_stock: true
+                      tags:
+                      - demo
+                      - laptop
+                    - id: 2
+                      name: "Y"
+                      type: phone
+                      price: 200
+                      in_stock: false
+                      tags:
+                      - demo
+                      - phone
+                    - id: 3
+                      name: Z
+                      type: accessory
+                      price: 9.99
+                      in_stock: true
+                      tags:
+                      - demo
+                      - accessory
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+    post:
+      tags:
+      - Items
+      summary: Create an item.
+      description: Create a new inventory item.
+      operationId: create_item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreate"
+            examples:
+              sample:
+                value:
+                  name: USB-C Hub
+                  type: ACCESSORY
+                  price: 49.99
+                  in_stock: false
+                  tags:
+                  - dock
+                  - usb-c
+        required: true
+      responses:
+        "201":
+          description: Created.
+          headers:
+            Location:
+              description: URL of the new resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /items/{id}:
+    get:
+      tags:
+      - Items
+      summary: Get one item by id.
+      description: Retrieve a single item by its identifier.
+      operationId: get_item
+      parameters:
+      - name: id
+        in: path
+        description: Item identifier.
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+      responses:
+        "200":
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+    put:
+      tags:
+      - Items
+      summary: Replace an item.
+      description: Replace an existing item. The server preserves `id` and `created_at`.
+      operationId: replace_item
+      parameters:
+      - name: id
+        in: path
+        description: Item identifier.
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemUpdate"
+        required: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          description: Invalid request body or parameters.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+    delete:
+      tags:
+      - Items
+      summary: Delete an item.
+      description: Remove an item from the inventory.
+      operationId: delete_item
+      parameters:
+      - name: id
+        in: path
+        description: Item identifier.
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+      responses:
+        "204":
+          description: No Content. Item deleted successfully.
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+    patch:
+      tags:
+      - Items
+      summary: Partially update an item.
+      description: Update one or more fields on an existing item. Only provided fields are changed.
+      operationId: patch_item
+      parameters:
+      - name: id
+        in: path
+        description: Item identifier.
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemPatch"
+        required: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          description: Invalid request body or parameters.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Resource not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        default:
+          description: Error response.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /reset:
+    post:
+      tags:
+      - System
+      summary: Reset the database.
+      description: Restore the database to a known seed state.
+      operationId: reset_database
+      responses:
+        "204":
+          description: No Content. Database reset successfully.
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ItemCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ItemPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+          format: float
+        in_stock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+    inline_response_200:
+      type: object
+      properties:
+        total:
+          minimum: 0
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"

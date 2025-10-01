@@ -1,0 +1,25 @@
+{
+  "provider": "tech-inventory-api",
+  "providerBaseUrl": "http://localhost:3000",
+  "providerVersion": "local-1759258890853",
+  "providerBranch": "main",
+  "brokerUrl": "https://monahan-tutorials.pactflow.io",
+  "brokerTokenMasked": "Wgrb…wA",
+  "consumerSelectors": [
+    {
+      "branch": "main",
+      "latest": true
+    }
+  ],
+  "publishResults": true,
+  "enablePending": false,
+  "logLevel": "info",
+  "startedAt": "2025-09-30T19:01:30.857Z",
+  "ok": false,
+  "finishedAt": "2025-09-30T19:01:30.887Z",
+  "durationMs": 30,
+  "error": {
+    "message": "includeWipPactsSince",
+    "stack": "TypeError: includeWipPactsSince\n    at assertImpl (C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\check-types\\src\\check-types.js:730:11)\n    at assertPredicate (C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\check-types\\src\\check-types.js:718:5)\n    at Function.nonEmptyString (C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\check-types\\src\\check-types.js:710:14)\n    at C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\validateOptions.js:67:71\n    at C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\validateOptions.js:206:30\n    at Array.forEach (<anonymous>)\n    at C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\validateOptions.js:205:27\n    at Array.forEach (<anonymous>)\n    at validateOptions (C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\validateOptions.js:195:52)\n    at new Verifier (C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\index.js:17:62)"
+  }
+}
