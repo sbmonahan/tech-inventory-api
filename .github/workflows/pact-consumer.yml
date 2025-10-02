@@ -95,7 +95,15 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      # Publish consumer pacts with the official PactFlow action
+      - name: Sanity-check broker auth
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.PACT_BROKER_TOKEN }}" \
+            "${{ vars.PACT_BROKER_BASE_URL }}/")
+          echo "Broker auth HTTP $code"
+          [ "$code" = "200" ] || exit 1
+
+
       # Publish consumer pacts with the official PactFlow action
       - name: Publish pacts to PactFlow
         if: success()
