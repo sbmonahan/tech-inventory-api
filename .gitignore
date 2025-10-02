@@ -36,3 +36,13 @@ Thumbs.db
 # Miscellaneous archives
 *.tgz
 *.zip
+
+# local backup and temp files
+*-old
+*-old.*
+*-bkp
+*-bkp.*
+*-tmp
+*-tmp.*
+*-temp
+*-temp.*
