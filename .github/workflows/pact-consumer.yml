@@ -25,65 +25,31 @@ jobs:
         run: npm ci
 
       # Recreate .env from Actions Secrets/Variables
-      - name: Create .env
-        run: |
-          cat > .env << 'EOF'
-          PACT_BROKER_BASE_URL=${{ vars.PACT_BROKER_BASE_URL }}
-          PACT_BROKER_TOKEN=${{ secrets.PACT_BROKER_TOKEN }}
-          PACT_BRANCH=${{ vars.PACT_BRANCH || github.ref_name }}
+      - name: Create .env for pact/verification scripts
+  run: |
+    cat > .env << 'EOF'
+    PACT_BROKER_BASE_URL=${{ secrets.PACT_BROKER_BASE_URL || vars.PACT_BROKER_BASE_URL }}
+    PACT_BROKER_TOKEN=${{ secrets.PACT_BROKER_TOKEN }}
+    PACT_BRANCH=${{ vars.PACT_BRANCH || github.ref_name }}
 
-          SH_OWNER=${{ vars.SH_OWNER }}
-          SH_API=${{ vars.SH_API }}
-          SH_API_KEY=${{ secrets.SH_API_KEY }}
-          SH_BASE_URL=${{ vars.SH_BASE_URL }}
-          SH_RESOLVED=${{ vars.SH_RESOLVED }}
-          SH_FLATTEN=${{ vars.SH_FLATTEN }}
+    SH_OWNER=${{ vars.SH_OWNER }}
+    SH_API=${{ vars.SH_API }}
+    SH_API_KEY=${{ secrets.SH_API_KEY }}
+    SH_BASE_URL=${{ vars.SH_BASE_URL }}
+    SH_RESOLVED=${{ vars.SH_RESOLVED }}
+    SH_FLATTEN=${{ vars.SH_FLATTEN }}
+    DEBUG_FETCH=${{ vars.DEBUG_FETCH }}
 
-          DEBUG_FETCH=${{ vars.DEBUG_FETCH }}
-          EOF
+    PROVIDER_NAME=${{ vars.PROVIDER_NAME || 'tech-inventory-api' }}
+    PROVIDER_BASE_URL=${{ vars.PROVIDER_BASE_URL || 'http://localhost:3000' }}
 
-      - name: Run consumer tests (generate pacts)
-        env:
-          CI: true
-        run: npm test
+    PACT_OUT_DIR=${{ vars.PACT_OUT_DIR || './artifacts/pact-verification' }}
+    VERIFIER_LOG_TO_FILE=${{ vars.VERIFIER_LOG_TO_FILE || 'true' }}
+    PACT_LOG_LEVEL=${{ vars.PACT_LOG_LEVEL || 'info' }}
+    PUBLISH_VERIFICATION_RESULT=${{ vars.PUBLISH_VERIFICATION_RESULT || 'true' }}
+    PACT_ENABLE_PENDING=${{ vars.PACT_ENABLE_PENDING || 'false' }}
+    EOF
 
-      - name: Upload generated pacts (artifact)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pacts
-          path: pacts/*.json
-          retention-days: 14
-
-      - name: Publish pacts to PactFlow (script)
-        if: success()
-        run: node ./scripts/1-publish-consumer.js --branch=${{ github.ref_name }}
-        env:
-          PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
-          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
-          PACT_BRANCH: ${{ github.ref_name }}
-          # Optionally pin a consumer version:
-          # PACT_CONSUMER_VERSION: ${{ github.sha }}
-
-      - name: Publish Provider Contract (OAS) for bi-di verification
-        if: success()
-        run: |
-          # If you fetch from SwaggerHub first:
-          node ./scripts/fetch-oas.js
-          node ./scripts/2-publish-provider-contract.js --provider=tech-inventory-api --branch=${{ github.ref_name }}
-        env:
-          PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
-          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
-          SH_OWNER: ${{ vars.SH_OWNER }}
-          SH_API: ${{ vars.SH_API }}
-          SH_API_KEY: ${{ secrets.SH_API_KEY }}
-          SH_BASE_URL: ${{ vars.SH_BASE_URL }}
-          SH_RESOLVED: ${{ vars.SH_RESOLVED }}
-          SH_FLATTEN: ${{ vars.SH_FLATTEN }}
-
-      - name: Cleanup .env
-        if: always()
-        run: rm -f .env
 
   provider:
     name: Provider → verify pacts
