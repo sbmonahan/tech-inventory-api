@@ -24,118 +24,23 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # Recreate .env from Actions Secrets/Variables
       - name: Create .env for pact/verification scripts
-  run: |
-    cat > .env << 'EOF'
-    PACT_BROKER_BASE_URL=${{ secrets.PACT_BROKER_BASE_URL || vars.PACT_BROKER_BASE_URL }}
-    PACT_BROKER_TOKEN=${{ secrets.PACT_BROKER_TOKEN }}
-    PACT_BRANCH=${{ vars.PACT_BRANCH || github.ref_name }}
-
-    SH_OWNER=${{ vars.SH_OWNER }}
-    SH_API=${{ vars.SH_API }}
-    SH_API_KEY=${{ secrets.SH_API_KEY }}
-    SH_BASE_URL=${{ vars.SH_BASE_URL }}
-    SH_RESOLVED=${{ vars.SH_RESOLVED }}
-    SH_FLATTEN=${{ vars.SH_FLATTEN }}
-    DEBUG_FETCH=${{ vars.DEBUG_FETCH }}
-
-    PROVIDER_NAME=${{ vars.PROVIDER_NAME || 'tech-inventory-api' }}
-    PROVIDER_BASE_URL=${{ vars.PROVIDER_BASE_URL || 'http://localhost:3000' }}
-
-    PACT_OUT_DIR=${{ vars.PACT_OUT_DIR || './artifacts/pact-verification' }}
-    VERIFIER_LOG_TO_FILE=${{ vars.VERIFIER_LOG_TO_FILE || 'true' }}
-    PACT_LOG_LEVEL=${{ vars.PACT_LOG_LEVEL || 'info' }}
-    PUBLISH_VERIFICATION_RESULT=${{ vars.PUBLISH_VERIFICATION_RESULT || 'true' }}
-    PACT_ENABLE_PENDING=${{ vars.PACT_ENABLE_PENDING || 'false' }}
-    EOF
-
-
-  provider:
-    name: Provider → verify pacts
-    runs-on: ubuntu-latest
-    needs: consumer
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install deps
-        run: npm ci
-
-      - name: Create .env
-        run: |
-          cat > .env << 'EOF'
-          PACT_BROKER_BASE_URL=${{ vars.PACT_BROKER_BASE_URL }}
-          PACT_BROKER_TOKEN=${{ secrets.PACT_BROKER_TOKEN }}
-          PACT_BRANCH=${{ github.ref_name }}
-          PROVIDER_NAME=${{ vars.PROVIDER_NAME || 'tech-inventory-api' }}
-          PROVIDER_BASE_URL=${{ vars.PROVIDER_BASE_URL || 'http://localhost:3000' }}
-
-          PACT_OUT_DIR=./artifacts/pact-verification
-          VERIFIER_LOG_TO_FILE=true
-          PACT_LOG_LEVEL=info
-          PUBLISH_VERIFICATION_RESULT=true
-          PACT_ENABLE_PENDING=true
-          PACT_INCLUDE_WIP_SINCE=2025-01-01
-          EOF
-
-      - name: Start provider (Docker)
-        run: |
-          docker compose up -d
-          # Simple health check
-          for i in {1..30}; do
-            curl -fsS http://localhost:3000/healthz && break
-            sleep 1
-          done
-
-      - name: Verify provider against PactFlow
-        run: npm run verify:provider
-
-      - name: Upload verification artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: verification-artifacts
-          path: artifacts/pact-verification/**
-
-      - name: Add readable summary to job
-        if: always()
-        run: |
-          echo "## Pact Verification Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f artifacts/pact-verification/*/summary.txt ]; then
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat artifacts/pact-verification/*/summary.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Stop provider
-        if: always()
-        run: docker compose down -v
-
-      - name: Cleanup .env
-        if: always()
-        run: rm -f .env
-
-  gate:
-    name: can-i-deploy gate (show the green/red value)
-    runs-on: ubuntu-latest
-    needs: provider
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Can I deploy provider → staging?
-        run: |
-          npx pact-broker can-i-deploy \
-            --pacticipant tech-inventory-api \
-            --to-environment staging \
-            --retry-while-unknown 10 \
-            --retry-interval 10
         env:
-          PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
-          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+          S_PACT_BROKER_BASE_URL: ${{ secrets.PACT_BROKER_BASE_URL }}
+          V_PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
+          PACT_BROKER_TOKEN:      ${{ secrets.PACT_BROKER_TOKEN }}
+          SH_OWNER:               ${{ vars.SH_OWNER }}
+          SH_API:                 ${{ vars.SH_API }}
+          SH_API_KEY:             ${{ secrets.SH_API_KEY }}
+          SH_BASE_URL:            ${{ vars.SH_BASE_URL }}
+          SH_RESOLVED:            ${{ vars.SH_RESOLVED }}
+          SH_FLATTEN:             ${{ vars.SH_FLATTEN }}
+          DEBUG_FETCH:            ${{ vars.DEBUG_FETCH }}
+          PROVIDER_NAME:          ${{ vars.PROVIDER_NAME }}
+          PROVIDER_BASE_URL:      ${{ vars.PROVIDER_BASE_URL }}
+          PACT_OUT_DIR:           ${{ vars.PACT_OUT_DIR }}
+          VERIFIER_LOG_TO_FILE:   ${{ vars.VERIFIER_LOG_TO_FILE }}
+          PACT_LOG_LEVEL:         ${{ vars.PACT_LOG_LEVEL }}
+          PUBLISH_VERIFICATION_RESULT: ${{ vars.PUBLISH_VERIFICATION_RESULT }}
+          PACT_ENABLE_PENDING:    ${{ vars.PACT_ENABLE_PENDING }}
+          PACT
