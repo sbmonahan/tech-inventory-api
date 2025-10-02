@@ -103,7 +103,6 @@ jobs:
           echo "Broker auth HTTP $code"
           [ "$code" = "200" ] || exit 1
 
-
       # Publish consumer pacts with the official PactFlow action
       - name: Publish pacts to PactFlow
         if: success()
@@ -112,7 +111,7 @@ jobs:
           broker_url: ${{ vars.PACT_BROKER_BASE_URL }}   # e.g. https://monahan-tutorials.pactflow.io
           pactfiles:  pacts/*.json
           token:      ${{ secrets.PACT_BROKER_TOKEN }}   # must be a valid RW token
-          version:    ${{ github.sha }}                  # <- was consumer-app-version
+          version:    ${{ github.sha }}
           branch:     ${{ github.ref_name }}
 
       - name: Cleanup .env
@@ -157,6 +156,9 @@ jobs:
           PUBLISH_VERIFICATION_RESULT=true
           PACT_ENABLE_PENDING=true
           PACT_INCLUDE_WIP_SINCE=2025-01-01
+
+          # tie verification results to the same version used by can-i-deploy
+          PROVIDER_APP_VERSION=${GITHUB_SHA}
           EOF
 
       - name: Start provider (Docker)
