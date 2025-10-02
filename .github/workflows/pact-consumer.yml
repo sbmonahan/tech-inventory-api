@@ -1,29 +1,271 @@
-name: Pact Consumer Tests
+name: PactFlow Demo
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, test, development, feature ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pactflow-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  pact-consumer:
+  consumer:
+    name: Consumer → generate & publish pacts
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
+
+      - name: Install deps
         run: npm ci
-      - name: Run Pact consumer tests
+
+      - name: Create .env for pact/verification scripts
+        env:
+          S_PACT_BROKER_BASE_URL: ${{ secrets.PACT_BROKER_BASE_URL }}
+          V_PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
+          PACT_BROKER_TOKEN:      ${{ secrets.PACT_BROKER_TOKEN }}
+          SH_OWNER:               ${{ vars.SH_OWNER }}
+          SH_API:                 ${{ vars.SH_API }}
+          SH_API_KEY:             ${{ secrets.SH_API_KEY }}
+          SH_BASE_URL:            ${{ vars.SH_BASE_URL }}
+          SH_RESOLVED:            ${{ vars.SH_RESOLVED }}
+          SH_FLATTEN:             ${{ vars.SH_FLATTEN }}
+          DEBUG_FETCH:            ${{ vars.DEBUG_FETCH }}
+          PROVIDER_NAME:          ${{ vars.PROVIDER_NAME }}
+          PROVIDER_BASE_URL:      ${{ vars.PROVIDER_BASE_URL }}
+          PACT_OUT_DIR:           ${{ vars.PACT_OUT_DIR }}
+          VERIFIER_LOG_TO_FILE:   ${{ vars.VERIFIER_LOG_TO_FILE }}
+          PACT_LOG_LEVEL:         ${{ vars.PACT_LOG_LEVEL }}
+          PUBLISH_VERIFICATION_RESULT: ${{ vars.PUBLISH_VERIFICATION_RESULT }}
+          PACT_ENABLE_PENDING:    ${{ vars.PACT_ENABLE_PENDING }}
+          PACT_BRANCH_OPT:        ${{ vars.PACT_BRANCH }}   # optional override
+        run: |
+          set -euo pipefail
+          PACT_BROKER_BASE_URL="${S_PACT_BROKER_BASE_URL:-${V_PACT_BROKER_BASE_URL:-}}"
+          if [ -z "$PACT_BROKER_BASE_URL" ]; then echo "Missing PACT_BROKER_BASE_URL"; exit 1; fi
+          : "${PACT_BROKER_TOKEN:?Missing secret PACT_BROKER_TOKEN}"
+          : "${SH_API_KEY:?Missing secret SH_API_KEY}"
+          BRANCH="${PACT_BRANCH_OPT:-$GITHUB_REF_NAME}"
+
+          cat > .env <<EOF
+          PACT_BROKER_BASE_URL=$PACT_BROKER_BASE_URL
+          PACT_BROKER_TOKEN=$PACT_BROKER_TOKEN
+          PACT_BRANCH=$BRANCH
+
+          SH_OWNER=${SH_OWNER}
+          SH_API=${SH_API}
+          SH_API_KEY=${SH_API_KEY}
+          SH_BASE_URL=${SH_BASE_URL:-https://api.swaggerhub.com}
+          SH_RESOLVED=${SH_RESOLVED:-true}
+          SH_FLATTEN=${SH_FLATTEN:-true}
+          DEBUG_FETCH=${DEBUG_FETCH:-0}
+
+          PROVIDER_NAME=${PROVIDER_NAME:-tech-inventory-api}
+          PROVIDER_BASE_URL=${PROVIDER_BASE_URL:-http://localhost:3000}
+
+          PACT_OUT_DIR=${PACT_OUT_DIR:-./artifacts/pact-verification}
+          VERIFIER_LOG_TO_FILE=${VERIFIER_LOG_TO_FILE:-true}
+          PACT_LOG_LEVEL=${PACT_LOG_LEVEL:-info}
+          PUBLISH_VERIFICATION_RESULT=${PUBLISH_VERIFICATION_RESULT:-true}
+          PACT_ENABLE_PENDING=${PACT_ENABLE_PENDING:-false}
+          EOF
+
+          echo "Wrote .env (redacted)."
+
+      - name: Run consumer tests (generate pacts)
         env:
           CI: true
-        run: |
-          npm run pact:consumer:test
-      - name: Upload pacts
+        run: npm run test   # or: npm run pact:consumer:test
+
+      - name: Upload generated pacts (artifact)
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: pacts
           path: pacts/*.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Sanity-check broker auth
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.PACT_BROKER_TOKEN }}" \
+            "${{ vars.PACT_BROKER_BASE_URL }}/")
+          echo "Broker auth HTTP $code"
+          [ "$code" = "200" ] || exit 1
+
+      # Publish consumer pacts with the official PactFlow action
+      - name: Publish pacts to PactFlow
+        if: success()
+        uses: pactflow/actions/publish-pact-files@v2
+        with:
+          broker_url: ${{ vars.PACT_BROKER_BASE_URL }}   # e.g. https://monahan-tutorials.pactflow.io
+          pactfiles:  pacts/*.json
+          token:      ${{ secrets.PACT_BROKER_TOKEN }}   # must be a valid RW token
+          version:    ${{ github.sha }}
+          branch:     ${{ github.ref_name }}
+
+      - name: Cleanup .env
+        if: always()
+        run: rm -f .env
+
+  provider:
+    name: Provider → verify pacts
+    runs-on: ubuntu-latest
+    needs: consumer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Create .env
+        env:
+          PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
+          PACT_BROKER_TOKEN:    ${{ secrets.PACT_BROKER_TOKEN }}
+          PROVIDER_NAME:        ${{ vars.PROVIDER_NAME }}
+          PROVIDER_BASE_URL:    ${{ vars.PROVIDER_BASE_URL }}
+        run: |
+          set -euo pipefail
+          : "${PACT_BROKER_BASE_URL:?Missing PACT_BROKER_BASE_URL}"
+          : "${PACT_BROKER_TOKEN:?Missing PACT_BROKER_TOKEN}"
+          cat > .env <<EOF
+          PACT_BROKER_BASE_URL=${PACT_BROKER_BASE_URL}
+          PACT_BROKER_TOKEN=${PACT_BROKER_TOKEN}
+          PACT_BRANCH=${GITHUB_REF_NAME}
+          PROVIDER_NAME=${PROVIDER_NAME:-tech-inventory-api}
+          PROVIDER_BASE_URL=${PROVIDER_BASE_URL:-http://localhost:3000}
+          PACT_OUT_DIR=./artifacts/pact-verification
+          VERIFIER_LOG_TO_FILE=true
+          PACT_LOG_LEVEL=info
+          PUBLISH_VERIFICATION_RESULT=true
+          PACT_ENABLE_PENDING=true
+          PACT_INCLUDE_WIP_SINCE=2025-01-01
+
+          # tie verification results to the same version used by can-i-deploy
+          PROVIDER_APP_VERSION=${GITHUB_SHA}
+          EOF
+
+      - name: Start provider (Docker)
+        run: |
+          docker compose up -d
+          for i in {1..30}; do
+            curl -fsS http://localhost:3000/healthz && break
+            sleep 1
+          done
+
+      - name: Verify provider against PactFlow
+        run: npm run verify:provider
+
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-artifacts
+          path: artifacts/pact-verification/**
+
+      - name: Add readable summary to job
+        if: always()
+        run: |
+          echo "## Pact Verification Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f artifacts/pact-verification/*/summary.txt ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat artifacts/pact-verification/*/summary.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Stop provider
+        if: always()
+        run: docker compose down -v
+
+      - name: Cleanup .env
+        if: always()
+        run: rm -f .env
+
+  gate:
+    name: can-i-deploy gate (only for mapped envs)
+    runs-on: ubuntu-latest
+    needs: provider
+
+    outputs:
+      deploy_env: ${{ steps.map.outputs.DEPLOY_ENV }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Map branch -> PactFlow environment (allowlist only)
+      - name: Map branch to PactFlow environment
+        id: map
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main)        DEPLOY_ENV=production ;;
+            test)        DEPLOY_ENV=test ;;
+            development) DEPLOY_ENV=development ;;
+            *)           DEPLOY_ENV="" ;;   # unknown branches: no deploy/record
+          esac
+          echo "DEPLOY_ENV=$DEPLOY_ENV" >> "$GITHUB_OUTPUT"
+          if [ -z "$DEPLOY_ENV" ]; then
+            echo "No mapped environment for branch '${GITHUB_REF_NAME}'. Skipping gate & deploy."
+          else
+            echo "Will target environment: $DEPLOY_ENV"
+          fi
+
+      # Gate only if we mapped an environment
+      - name: Can I deploy provider → ${{ steps.map.outputs.DEPLOY_ENV }}?
+        if: ${{ steps.map.outputs.DEPLOY_ENV != '' }}
+        uses: pactflow/actions/can-i-deploy@v2
+        with:
+          broker_url:       ${{ vars.PACT_BROKER_BASE_URL }}
+          token:            ${{ secrets.PACT_BROKER_TOKEN }}
+          application_name: tech-inventory-api
+          version:          ${{ github.sha }}
+          to_environment:   ${{ steps.map.outputs.DEPLOY_ENV }}
+          retry_while_unknown: 10
+          retry_interval: 10
+
+
+  deploy:
+    name: Deploy → ${{ needs.gate.outputs.deploy_env }}
+    runs-on: ubuntu-latest
+    needs: gate
+    # Only deploy if gate ran AND passed AND there is a mapped env
+    if: ${{ needs.gate.outputs.deploy_env != '' && needs.gate.result == 'success' }}
+
+    # This will auto-deploy to dev/test; and pause for approval on staging/prod
+    # (configure Required reviewers in GitHub → Settings → Environments)
+    environment:
+      name: ${{ needs.gate.outputs.deploy_env }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⬇️ Replace with your real deploy commands
+      - name: Deploy application
+        run: |
+          echo "Deploying ${GITHUB_SHA} to ${{ needs.gate.outputs.deploy_env }}..."
+          # kubectl/helm/ssh/etc.
+
+      - name: Record deployment in PactFlow
+        uses: pactflow/actions/record-deployment@v2
+        with:
+          broker_url:       ${{ vars.PACT_BROKER_BASE_URL }}
+          token:            ${{ secrets.PACT_BROKER_TOKEN }}
+          application_name: tech-inventory-api
+          version:          ${{ github.sha }}
+          environment:      ${{ needs.gate.outputs.deploy_env }}
+
