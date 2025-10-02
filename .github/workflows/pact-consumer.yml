@@ -83,7 +83,7 @@ jobs:
       - name: Run consumer tests (generate pacts)
         env:
           CI: true
-        run: npm run pact:consumer:test   # or: npm test
+        run: npm run test   # or: npm test
 
       - name: Upload generated pacts (artifact)
         if: success()
