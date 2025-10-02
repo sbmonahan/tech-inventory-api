@@ -3,7 +3,7 @@ name: PactFlow Demo
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, test, development ]
 
 permissions:
   contents: read
