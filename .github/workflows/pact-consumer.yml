@@ -216,7 +216,6 @@ jobs:
             main)        DEPLOY_ENV=production ;;
             test)        DEPLOY_ENV=test ;;
             development) DEPLOY_ENV=development ;;
-            feature)     DEPLOY_ENV=staging ;;
             *)           DEPLOY_ENV="" ;;   # unknown branches: no deploy/record
           esac
           echo "DEPLOY_ENV=$DEPLOY_ENV" >> "$GITHUB_OUTPUT"
