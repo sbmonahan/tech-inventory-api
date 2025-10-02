@@ -210,9 +210,8 @@ jobs:
         with:
           broker_url: ${{ vars.PACT_BROKER_BASE_URL }}
           token:      ${{ secrets.PACT_BROKER_TOKEN }}
-          pacticipant: tech-inventory-api         # must EXACTLY match your provider name
-          version:     ${{ github.sha }}          # matches PROVIDER_APP_VERSION set in provider job
+          application_name: tech-inventory-api     # <- was 'pacticipant'
+          version:     ${{ github.sha }}           # must match PROVIDER_APP_VERSION you publish
           to_environment: staging
           retry_while_unknown: 10
           retry_interval: 10
-
