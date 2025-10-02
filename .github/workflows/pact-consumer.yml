@@ -3,10 +3,14 @@ name: PactFlow Demo
 on:
   workflow_dispatch:
   push:
-    branches: [ main, test, development, feature ]  # change to 'feature/**' if you want all feature branches
+    branches: [ main, test, development, feature ]
 
 permissions:
   contents: read
+
+concurrency:
+  group: pactflow-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   consumer:
@@ -91,10 +95,10 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      # ⬇️ Replaced your node script with the official PactFlow action
+      # Publish consumer pacts with the official PactFlow action
       - name: Publish pacts to PactFlow
         if: success()
-        uses: pactflow/actions/publish-pacts@v1
+        uses: pactflow/actions/publish-pact-files@v2
         with:
           pactfiles: pacts/*.json
           consumer-app-version: ${{ github.sha }}
