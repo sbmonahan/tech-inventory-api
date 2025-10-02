@@ -3,7 +3,7 @@ name: PactFlow Demo
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, test, development, feature ]  # change to 'feature/**' if you want all feature branches
 
 permissions:
   contents: read
@@ -46,13 +46,10 @@ jobs:
           PACT_BRANCH_OPT:        ${{ vars.PACT_BRANCH }}   # optional override
         run: |
           set -euo pipefail
-
-          # Fallbacks & required checks
           PACT_BROKER_BASE_URL="${S_PACT_BROKER_BASE_URL:-${V_PACT_BROKER_BASE_URL:-}}"
           if [ -z "$PACT_BROKER_BASE_URL" ]; then echo "Missing PACT_BROKER_BASE_URL"; exit 1; fi
           : "${PACT_BROKER_TOKEN:?Missing secret PACT_BROKER_TOKEN}"
           : "${SH_API_KEY:?Missing secret SH_API_KEY}"
-
           BRANCH="${PACT_BRANCH_OPT:-$GITHUB_REF_NAME}"
 
           cat > .env <<EOF
@@ -83,7 +80,7 @@ jobs:
       - name: Run consumer tests (generate pacts)
         env:
           CI: true
-        run: npm run test   # or: npm test
+        run: npm run test   # or: npm run pact:consumer:test
 
       - name: Upload generated pacts (artifact)
         if: success()
@@ -92,10 +89,19 @@ jobs:
           name: pacts
           path: pacts/*.json
           retention-days: 14
+          if-no-files-found: warn
 
+      # ⬇️ Replaced your node script with the official PactFlow action
       - name: Publish pacts to PactFlow
         if: success()
-        run: node ./scripts/1-publish-consumer.js --branch=${{ github.ref_name }}
+        uses: pactflow/actions/publish-pacts@v1
+        with:
+          pactfiles: pacts/*.json
+          consumer-app-version: ${{ github.sha }}
+          branch: ${{ github.ref_name }}
+        env:
+          PACT_BROKER_BASE_URL: ${{ vars.PACT_BROKER_BASE_URL }}
+          PACT_BROKER_TOKEN:    ${{ secrets.PACT_BROKER_TOKEN }}
 
       - name: Cleanup .env
         if: always()
@@ -127,14 +133,12 @@ jobs:
           set -euo pipefail
           : "${PACT_BROKER_BASE_URL:?Missing PACT_BROKER_BASE_URL}"
           : "${PACT_BROKER_TOKEN:?Missing PACT_BROKER_TOKEN}"
-
           cat > .env <<EOF
           PACT_BROKER_BASE_URL=${PACT_BROKER_BASE_URL}
           PACT_BROKER_TOKEN=${PACT_BROKER_TOKEN}
           PACT_BRANCH=${GITHUB_REF_NAME}
           PROVIDER_NAME=${PROVIDER_NAME:-tech-inventory-api}
           PROVIDER_BASE_URL=${PROVIDER_BASE_URL:-http://localhost:3000}
-
           PACT_OUT_DIR=./artifacts/pact-verification
           VERIFIER_LOG_TO_FILE=true
           PACT_LOG_LEVEL=info
