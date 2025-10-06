@@ -1,0 +1,26 @@
+{
+  "provider": "tech-inventory-api",
+  "providerBaseUrl": "http://localhost:3000",
+  "providerVersion": "local-1759436700558",
+  "providerBranch": "main",
+  "brokerUrl": "https://monahan-tutorials.pactflow.io",
+  "brokerTokenMasked": "Wgrb…wA",
+  "consumerSelectors": [
+    {
+      "branch": "main",
+      "latest": true
+    }
+  ],
+  "publishResults": true,
+  "enablePending": false,
+  "includeWipPactsSince": "(omitted)",
+  "logLevel": "info",
+  "startedAt": "2025-10-02T20:25:00.560Z",
+  "ok": false,
+  "finishedAt": "2025-10-02T20:25:08.590Z",
+  "durationMs": 8030,
+  "error": {
+    "message": "Verfication failed",
+    "stack": "Error: Verfication failed\n    at C:\\Users\\john.monahan\\gits\\tech-inventory-api\\node_modules\\@pact-foundation\\pact-core\\src\\verifier\\nativeVerifier.js:62:32"
+  }
+}
